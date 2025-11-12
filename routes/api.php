@@ -1,8 +1,13 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::post('/auth/login',  [AuthController::class, 'login']);   // email+password → envía OTP
+Route::post('/auth/verify', [AuthController::class, 'verify']);  // email+OTP → token
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    // …tus endpoints protegidos
+    Route::get('/books', fn() => \App\Models\Book::paginate(20));
+});
