@@ -10,15 +10,15 @@ class LoginOtpMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public string $code, public string $appName = 'Aurora API') {}
+    public $otp;
+
+    public function __construct($otp) {
+        $this->otp = $otp;
+    }
 
     public function build()
     {
-        return $this->subject("Tu código de acceso ({$this->appName})")
-            ->markdown('emails.login-otp')
-            ->with([
-                'code' => $this->code,
-                'app'  => $this->appName,
-            ]);
+        return $this->subject("Tu código de acceso")
+            ->markdown('emails.login-otp');
     }
 }

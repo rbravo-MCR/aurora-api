@@ -1,12 +1,13 @@
 @component('mail::message')
 # Código de acceso
 
-Tu código para **{{ $app }}** es:
+Tu código para **{{ config('app.name') }}** es:
 
-# **{{ $code }}**
+# **{{ $otp }}**
 
-Caduca en 5 minutos. Si no lo solicitaste, ignora este correo.
+Caduca en **5 minutos**.  
+Si no lo solicitaste, ignora este correo.
 
-Gracias,<br>
+Gracias,  
 {{ config('app.name') }}
 @endcomponent

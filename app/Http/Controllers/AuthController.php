@@ -39,6 +39,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Demasiados intentos, espera unos minutos.'], 429);
         }
 
+        if(!$user->is_active){
+            return response()->json([            
+                'message' => 'Usuario no activo.',
+                'errors' => ['email' => 'Usuario no activo.']
+                ],403);
+            };
         // Código de 6 dígitos
         $code = (string)random_int(100000, 999999);
 
@@ -46,7 +52,7 @@ class AuthController extends Controller
             'user_id'    => $user->id,
             'code_hash'  => Hash::make($code),
             'purpose'    => 'login',
-            'expires_at' => now()->addMinutes(10),
+            'expires_at' => now()->addMinutes(5),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -116,8 +122,14 @@ class AuthController extends Controller
             
         $name = $data['device_name'] ?? ('api-'.Str::random(6));
         $token = $user->createToken($name)->plainTextToken;
+    
+        session()->put('usuario', $user->name);
+        session()->put('usuario_id', $user->id);
+
 
         return response()->json([
+            'usuario'      => $user->name,
+            'usuario_id'   => $user->id,
             'token_type'   => 'Bearer',
             'access_token' => $token,
         ], 200);
