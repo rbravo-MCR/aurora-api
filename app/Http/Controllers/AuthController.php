@@ -40,7 +40,7 @@ class AuthController extends Controller
         }
 
         if(!$user->is_active){
-            return response()->json([            
+            return response()->json([
                 'message' => 'Usuario no activo.',
                 'errors' => ['email' => 'Usuario no activo.']
                 ],403);
@@ -119,10 +119,10 @@ class AuthController extends Controller
         ->where('id','<>',$match->id)
         ->delete();
 
-            
+
         $name = $data['device_name'] ?? ('api-'.Str::random(6));
         $token = $user->createToken($name)->plainTextToken;
-    
+
         session()->put('usuario', $user->name);
         session()->put('usuario_id', $user->id);
 
@@ -200,5 +200,76 @@ class AuthController extends Controller
 
         return response()->json($payload, 201);
     }
+
+    public function resendOtp(Request $r)
+{
+    // Solo necesitamos el email
+    $data = $r->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    // Buscar usuario por email
+    $user = User::where('email', $data['email'])->first();
+
+    if (!$user) {
+        throw ValidationException::withMessages([
+            'email' => 'Usuario no encontrado.',
+        ]);
+    }
+
+    // Si el usuario no está activo, mismo comportamiento que login
+    if (!$user->is_active) {
+        return response()->json([
+            'message' => 'Usuario no activo.',
+            'errors'  => ['email' => 'Usuario no activo.'],
+        ], 403);
+    }
+
+    // Throttling básico: máx 5 OTP sin usar en la última hora (igual que en login)
+    $recent = DB::table('email_otps')
+        ->where('user_id', $user->id)
+        ->whereNull('used_at')
+        ->where('created_at', '>', now()->subHour())
+        ->count();
+
+    if ($recent >= 5) {
+        return response()->json([
+            'message' => 'Demasiados intentos, espera unos minutos.'
+        ], 429);
+    }
+
+    // Código de 6 dígitos
+    $code = (string) random_int(100000, 999999);
+
+    // Guardar OTP en la misma tabla/estructura que ya usas
+    DB::table('email_otps')->insert([
+        'user_id'    => $user->id,
+        'code_hash'  => Hash::make($code),
+        'purpose'    => 'login',
+        'expires_at' => now()->addMinutes(5),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Log del OTP en local para pruebas
+    \Log::info('OTP (reenviado) para '.$user->email.': '.$code);
+
+    // Enviar correo — igual que en login
+    try {
+        Mail::to($user->email)->send(new LoginOtpMail($code, config('app.name')));
+    } catch (\Throwable $e) {
+        \Log::error('Error reenviando OTP: '.$e->getMessage());
+        // No lanzamos excepción para no romper en local
+    }
+
+    $payload = ['message' => 'Código reenviado a tu email.'];
+
+    // En local, regresamos el OTP en la respuesta para que sea fácil probar
+    if (app()->isLocal()) {
+        $payload['debug_otp'] = $code;
+    }
+
+    return response()->json($payload, 200);
+}
 
 }

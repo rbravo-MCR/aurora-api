@@ -3,7 +3,8 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/auth/login',  [AuthController::class, 'login']);   // email+password → envía OTP
+Route::post('/auth/login',  [AuthController::class, 'login']);
+Route::post('/auth/resend-otp', [AuthController::class, 'resendOtp']);  // email → reenvía OTP
 Route::post('/auth/verify', [AuthController::class, 'verify']);  // email+OTP → token
 //Route::get('/ping', fn() => response()->json(['ok' => true]));
 Route::post('/auth/register',[AuthController::class, 'register']);
